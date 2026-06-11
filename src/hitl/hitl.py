@@ -65,32 +65,34 @@ class ConfidenceRouter:
         Returns:
             RoutingDecision with routing action and metadata
         """
-        # TODO 12: Implement routing logic
-        #
-        # 1. Check if action_type is in HIGH_RISK_ACTIONS
-        #    -> If yes: always escalate (action="escalate", priority="high",
-        #       requires_human=True, reason="High-risk action: {action_type}")
-        #
-        # 2. Check confidence thresholds:
-        #    - confidence >= 0.9:
-        #      action="auto_send", priority="low",
-        #      requires_human=False, reason="High confidence"
-        #
-        #    - 0.7 <= confidence < 0.9:
-        #      action="queue_review", priority="normal",
-        #      requires_human=True, reason="Medium confidence — needs review"
-        #
-        #    - confidence < 0.7:
-        #      action="escalate", priority="high",
-        #      requires_human=True, reason="Low confidence — escalating"
+        if action_type in HIGH_RISK_ACTIONS:
+            action = "escalate"
+            priority = "high"
+            requires_human = True
+            reason = f"High-risk action '{action_type}' requires human approval"
+        elif confidence >= self.HIGH_THRESHOLD:
+            action = "auto_send"
+            priority = "low"
+            requires_human = False
+            reason = f"High confidence ({confidence:.2f}) >= threshold ({self.HIGH_THRESHOLD})"
+        elif confidence >= self.MEDIUM_THRESHOLD:
+            action = "queue_review"
+            priority = "normal"
+            requires_human = True
+            reason = f"Medium confidence ({confidence:.2f}) between {self.MEDIUM_THRESHOLD} and {self.HIGH_THRESHOLD}"
+        else:
+            action = "escalate"
+            priority = "high"
+            requires_human = True
+            reason = f"Low confidence ({confidence:.2f}) < threshold ({self.MEDIUM_THRESHOLD})"
 
         return RoutingDecision(
-            action="auto_send",
+            action=action,
             confidence=confidence,
-            reason="TODO: implement routing logic",
-            priority="low",
-            requires_human=False,
-        )  # TODO: Replace with implementation
+            reason=reason,
+            priority=priority,
+            requires_human=requires_human
+        )
 
 
 # ============================================================
@@ -109,27 +111,27 @@ class ConfidenceRouter:
 hitl_decision_points = [
     {
         "id": 1,
-        "name": "TODO: Name this decision point",
-        "trigger": "TODO: When does this trigger?",
-        "hitl_model": "TODO: human-in-the-loop / human-on-the-loop / human-as-tiebreaker",
-        "context_needed": "TODO: What does the reviewer need to see?",
-        "example": "TODO: Give a concrete example scenario",
+        "name": "High-Value Money Transfer Approval",
+        "trigger": "Transfer amount > 50,000,000 VND OR cumulative daily transfers > 100,000,000 VND",
+        "hitl_model": "human-as-tiebreaker",
+        "context_needed": "Customer account balance, transaction history (last 7 days), recipient account details, transfer purpose, fraud risk score, customer KYC verification level.",
+        "example": "Customer requests to transfer 120,000,000 VND to a newly registered recipient account.",
     },
     {
         "id": 2,
-        "name": "TODO: Name this decision point",
-        "trigger": "TODO: When does this trigger?",
-        "hitl_model": "TODO: human-in-the-loop / human-on-the-loop / human-as-tiebreaker",
-        "context_needed": "TODO: What does the reviewer need to see?",
-        "example": "TODO: Give a concrete example scenario",
+        "name": "Sensitive Personal Information Update",
+        "trigger": "Change of primary contact details (phone, email) OR updates to KYC fields.",
+        "hitl_model": "human-in-the-loop",
+        "context_needed": "Current customer information, photo of ID documents, selfie verification match, previous change timestamps, recent login IP/device history.",
+        "example": "Customer requests to change their registered phone number via chat after logging in from a new device.",
     },
     {
         "id": 3,
-        "name": "TODO: Name this decision point",
-        "trigger": "TODO: When does this trigger?",
-        "hitl_model": "TODO: human-in-the-loop / human-on-the-loop / human-as-tiebreaker",
-        "context_needed": "TODO: What does the reviewer need to see?",
-        "example": "TODO: Give a concrete example scenario",
+        "name": "Account Closure & Balance Withdrawal",
+        "trigger": "Account closure requests OR account deactivation with outstanding balances.",
+        "hitl_model": "human-as-tiebreaker",
+        "context_needed": "Current account balance, outstanding loans or unpaid credit cards, active recurring payments, customer tier (VIP/Regular), closure reasoning.",
+        "example": "Customer wants to close their bank account which has a remaining balance of 5,000,000 VND and a linked credit card.",
     },
 ]
 
